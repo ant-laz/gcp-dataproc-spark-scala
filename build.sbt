@@ -7,3 +7,10 @@ lazy val root = (project in file("."))
     name := "gcpsparkscala",
     idePackagePrefix := Some("org.tonyz.com")
   )
+
+val sparkVersion = "3.5.0"
+
+libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql"  % sparkVersion
+)
