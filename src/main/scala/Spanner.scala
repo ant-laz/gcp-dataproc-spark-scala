@@ -18,6 +18,8 @@ object Hello {
       .appName("spark-spanner-demo")
       .config("spark.master", "local")
       .getOrCreate()
+    
+    import spark.implicits._
 
     // Load data in from Spanner. See
     // https://github.com/GoogleCloudDataproc/spark-spanner-connector/blob/main/README.md#properties
@@ -76,6 +78,30 @@ object Hello {
           .set("name").to(name)
           .build()
 
+        // Apply mutation
+        databaseClient.write(Collections.singletonList(mutation))
+      }
+    }
+
+//    Read from BigQuery table
+    val df = spark.read.bigquery("prabha-poc.lbg.spanner_out")
+    df.show()
+    val result: Seq[(Long, Long, String)] = df.as[(Long, Long, String)].collect().toSeq
+
+//    Write to Cloud Spanner using Mutation
+    val rdd = spark.sparkContext.parallelize(result)
+    rdd.foreachPartition { partition =>
+      // Establish Spanner connection within each partition
+      val options = SpannerOptions.newBuilder().build()
+      val spanner = options.getService()
+      val databaseClient = spanner.getDatabaseClient(com.google.cloud.spanner.DatabaseId.of("prabha-poc", "test-instance", "example-db"))
+      partition.foreach {  case (singerId, albumId, albumTitle) =>
+        // Build mutation for each record
+        val mutation = Mutation.newInsertOrUpdateBuilder("bigquery_out")
+          .set("SingerId").to(singerId)
+          .set("AlbumId").to(albumId)
+          .set("AlbumTitle").to(albumTitle)
+          .build()
         // Apply mutation
         databaseClient.write(Collections.singletonList(mutation))
       }
