@@ -16,8 +16,11 @@ package org.tonyz.com
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.jdbc.JdbcDialects
+
 object Main {
   def main(args: Array[String]): Unit = {
+
+    //---------PARSE COMMAND LINE ARGUMENTS-------------------------------------
     val numArgs = 6
     if (args.length != numArgs) {
       throw new IllegalArgumentException(
@@ -32,17 +35,21 @@ object Main {
     val db = args(4)
     val tbl = args(5)
 
+    //---------CREATE SPARK SESSION---------------------------------------------
     val spark = SparkSession.builder()
       .appName("gcp-spark-scala")
       .getOrCreate()
 
+    //---------READ SOURCE DATA FROM BIGQUERY-----------------------------------
     val bqDF = spark
       .read
       .format("bigquery")
       .load(s"$prj.$bqDataset.$bqTable")
 
+    //---------TELL SPARK TO USE OUR CUSTOM SQL DIALECT FOR SPANNER-------------
     JdbcDialects.registerDialect(SpannerJdbcDialect)
 
+    //---------WRITE DATA FROM BIGQUERY TO SPANNER------------------------------
     val url = s"jdbc:cloudspanner:/projects/$prj/instances/$inst/databases/$db"
     val driver = "com.google.cloud.spanner.jdbc.JdbcDriver"
     val fmt = "jdbc"
@@ -53,7 +60,6 @@ object Main {
       .option("dbtable", tbl)
       .mode("append")
       .save()
-
 
   }
 }
